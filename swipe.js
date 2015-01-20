@@ -2,58 +2,59 @@ var React = require("react/addons")
 var Swipe = require("./vendor/swipe")
 
 var styles = {
-  container: {
-    overflow: "hidden",
-    visibility: "hidden",
-    position: "relative"
-  },
+    container: {
+        overflow: "hidden",
+        visibility: "hidden",
+        position: "relative",
+        height: "100%"
+    },
 
-  wrapper: {
-    overflow: "hidden",
-    position: "relative"
-  },
+    wrapper: {
+        overflow: "hidden",
+        position: "relative",
+        height: "100%"
+    },
 
-  child: {
-    float: "left",
-    width: "100%",
-    position: "relative"
-  }
-}
+    child: {
+        float: "left",
+        width: "100%",
+        position: "relative",
+        height: "100%"
+    }
+};
 
 module.exports = React.createClass({
-  displayName: "Swipe",
+    displayName: "Swipe",
 
-  // https://github.com/thebird/Swipe#config-options
-  propTypes: {
-    startSlide      : React.PropTypes.number,
-    speed           : React.PropTypes.number,
-    auto            : React.PropTypes.number,
-    continuous      : React.PropTypes.bool,
-    disableScroll   : React.PropTypes.bool,
-    stopPropagation : React.PropTypes.bool,
-    callback        : React.PropTypes.func,
-    transitionEnd   : React.PropTypes.func
-  },
+    propTypes: {
+        startSlide      : React.PropTypes.number,
+        speed           : React.PropTypes.number,
+        auto            : React.PropTypes.number,
+        continuous      : React.PropTypes.bool,
+        disableScroll   : React.PropTypes.bool,
+        stopPropagation : React.PropTypes.bool,
+        callback        : React.PropTypes.func,
+        transitionEnd   : React.PropTypes.func
+    },
 
-  componentDidMount: function() {
-    this.swipe = Swipe(this.getDOMNode(), this.props)
-  },
+    componentDidMount: function() {
+        this.swipe = Swipe(this.getDOMNode(), this.props);
+    },
 
-  componentWillUnmount: function() {
-    this.swipe.kill()
+    componentWillUnmount: function() {
+        this.swipe.kill();
+        delete this.swipe;
+    },
 
-    delete this.swipe
-  },
+    render: function() {
+        var container = React.DOM.div(this.props,
+        React.DOM.div(
+            {style: styles.wrapper},
+            React.Children.map(this.props.children, function(child) {
+                return React.addons.cloneWithProps(child, {style: styles.child})
+            })
+        ));
 
-  render: function() {
-    var container = React.DOM.div(this.props,
-      React.DOM.div({style: styles.wrapper},
-        React.Children.map(this.props.children, function(child) {
-          return React.addons.cloneWithProps(child, {style: styles.child})
-        })
-      )
-    )
-
-    return React.addons.cloneWithProps(container, {style: styles.container})
-  }
-})
+        return React.addons.cloneWithProps(container, {style: styles.container});
+    }
+});
