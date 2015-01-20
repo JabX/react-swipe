@@ -16,17 +16,14 @@
   },
   "main": "swipe.js",
   "license": "MIT",
-  "devDependencies": {
-    "browserify": "^5.9.1",
-    "literalify": "^0.3.0"
-  },
-  "literalify": {
-    "react/addons": "window.React"
-  },
-  "scripts": {
-    "build": "browserify swipe.js -t literalify -s Swipe -o demo/index.js"
-  },
   "dependencies": {
-    "react": "^0.11.1 || ^0.12.1"
+    "lodash": "*",
+    "react": "*"
+  },
+  "devDependencies": {
+    "browserify": "^8.1.2",
+    "gulp": "^3.8.10",
+    "reactify": "^1.0.0",
+    "vinyl-source-stream": "^1.0.0"
   }
 }
