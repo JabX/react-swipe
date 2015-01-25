@@ -65,10 +65,10 @@ module.exports = function(container, options) {
         while (pos--) {
             var slide = slides[pos];
             slide.style.width = width + 'px';
+            slide.style.position = 'absolute';
             slide.setAttribute('data-index', pos);
 
             if (browser.transitions) {
-                slide.style.left = (pos * -width) + 'px';
                 move(pos, index > pos ? -width : (index < pos ? width : 0), 0);
             }
         }
@@ -78,8 +78,6 @@ module.exports = function(container, options) {
             move(circle(index - 1), -width, 0);
             move(circle(index + 1), width, 0);
         }
-
-        if (!browser.transitions) element.style.left = (index * -width) + 'px';
 
         container.style.visibility = 'visible';
     }
@@ -163,24 +161,16 @@ module.exports = function(container, options) {
     }
 
     function animate(from, to, speed) {
-        // if not an animation, just reposition
-        if (!speed) {
-            element.style.left = to + 'px';
-            return;
-        }
-    
         var start = +new Date;
 
         var timer = setInterval(function() {
             var timeElap = +new Date - start;
             if (timeElap > speed) {
-                element.style.left = to + 'px';
                 if (delay)
                     begin();
                 options.transitionEnd && options.transitionEnd.call(event, index, slides[index]);
                 clearInterval(timer);return;
             }
-            element.style.left = (( (to - from) * (Math.floor((timeElap / speed) * 100) / 100) ) + from) + 'px';
         }, 4);
     }
 
@@ -445,14 +435,12 @@ module.exports = function(container, options) {
 
             // reset element
             element.style.width = 'auto';
-            element.style.left = 0;
 
             // reset slides
             var pos = slides.length;
             while(pos--) {
                 var slide = slides[pos];
                 slide.style.width = '100%';
-                slide.style.left = 0;
 
                 if (browser.transitions)
                     translate(pos, 0, 0);

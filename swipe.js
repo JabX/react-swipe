@@ -16,10 +16,7 @@ var styles = {
     },
 
     child: {
-        float: "left",
-        width: "100%",
-        position: "relative",
-        height: "100%"
+
     }
 };
 
