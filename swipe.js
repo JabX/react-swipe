@@ -51,6 +51,10 @@ module.exports = React.createClass({
         this.swipe.prev();
     },
 
+    moveTo: function(to) {
+        this.swipe.slide(to);
+    },
+
     render: function() {
         var container = React.DOM.div(this.props,
         React.DOM.div(
