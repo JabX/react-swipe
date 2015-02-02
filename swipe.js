@@ -7,7 +7,7 @@ module.exports = React.createClass({
     getDefaultProps: function() {
         return {
             startSlide: 0,
-            speed: 300,
+            speed: 250,
             continuous: false,
             edgeFlick: true
         };
@@ -18,6 +18,7 @@ module.exports = React.createClass({
             index: this.props.startSlide,
             slideStyle: new Array(this.props.children.length),
             slidePos: new Array(this.props.children.length),
+            width: 0,
             totalWidth: 0
         };
     },
@@ -36,23 +37,23 @@ module.exports = React.createClass({
         this.props.children.map(function(slide, i) {
             var width;
             if (!slide.props.style.width)
-                width = defaultWidth + 'px';
+                width = defaultWidth;
             else
-                width = slide.props.style.width;
-            totalWidth += parseInt(width.slice(0, -2));
+                width = parseInt(slide.props.style.width);
+            totalWidth += width;
 
-            slideStyle[i] = {width: width, position: "absolute", height: "100%"}
+            slideStyle[i] = {width: width, position: "absolute", height: "100%"};
         });
 
-        this.setState({slideStyle: slideStyle, totalWidth: (totalWidth + 'px')}, function() {
+        this.setState({slideStyle: slideStyle, width: defaultWidth, totalWidth: totalWidth}, function() {
             // Positioning slides
             for(var i = 0; i < slideStyle.length; i++)
-                this.move(i, this.state.index > i ? -slideStyle[i].width.slice(0, -2) : (this.state.index < i ? slideStyle[this.state.index].width.slice(0, -2) : 0), 0);
+                this.move(i, this.state.index > i ? -slideStyle[i].width : (this.state.index < i ? slideStyle[this.state.index].width : 0), 0);
 
             // Special positioning if continuous
             if (this.props.continuous) {
-                this.move(this.circle(this.state.index - 1), -slideStyle[this.circle(this.state.index - 1)].width.slice(0, -2), 0);
-                this.move(this.circle(this.state.index + 1), slideStyle[this.state.index].width.slice(0, -2), 0);
+                this.move(this.getIndex(this.state.index - 1), -slideStyle[this.getIndex(this.state.index - 1)].width, 0);
+                this.move(this.getIndex(this.state.index + 1), slideStyle[this.state.index].width, 0);
             }
 
             this.getDOMNode().addEventListener('pointerdown', this.onTouchDown);
@@ -60,18 +61,23 @@ module.exports = React.createClass({
     },
 
     prev: function() {
-        if(this.props.continuous || this.state.index > 0)
-            this.slide(this.state.index - 1);
+        this.slide(this.getIndex(this.state.index - 1));
     },
 
     next: function() {
-        if (this.props.continuous || this.state.index < this.props.children.length - 1)
-            this.slide(this.state.index + 1);
+        this.slide(this.getIndex(this.state.index + 1));
     },
 
-    circle: function(index) {
-        var slidesNumber = this.props.children.length;
-        return (slidesNumber + (index % slidesNumber)) % slidesNumber;
+    getIndex: function(index) {
+        var slidesNumber = this.state.slidePos.length;
+
+        if(this.props.continuous)
+            return (slidesNumber + (index % slidesNumber)) % slidesNumber;
+        else {
+            if(index < 0) return 0;
+            else if (index >= slidesNumber) return slidesNumber;
+            else return index;
+        }
     },
 
     slide: function(to) {
@@ -84,12 +90,12 @@ module.exports = React.createClass({
         // get the actual position of the slide
         if (this.props.continuous) {
             var natural_direction = direction;
-            direction = -this.state.slidePos[this.circle(to)] / this.state.slideStyle[this.circle(to)].width.slice(0, -2);
+            direction = -this.state.slidePos[this.getIndex(to)] / this.state.slideStyle[this.getIndex(to)].width;
 
             // if going forward but to < index, use to = slides.length + to
             // if going backward but to > index, use to = -slides.length + to
             if (direction !== natural_direction)
-                to =  -direction * slides.length + to;
+                to =  -direction * this.state.slideStyle.length + to;
         }
 
         var diff = Math.abs(this.state.index - to) - 1;
@@ -98,19 +104,19 @@ module.exports = React.createClass({
         // Move all the slides between index and to in the right direction
         while (diff > -1) {
             diff--;
-            current = this.circle((to > this.state.index ? to : this.state.index) - diff - 1);
+            current = this.getIndex((to > this.state.index ? to : this.state.index) - diff - 1);
             if(direction == 1)
-                this.move(current, this.state.slideStyle[this.circle(current + 1)].width.slice(0, -2), 0);
+                this.move(current, this.state.slideStyle[this.getIndex(current + 1)].width, 0);
             else
-                this.move(current, -this.state.slideStyle[current].width.slice(0, -2), 0);
+                this.move(current, -this.state.slideStyle[current].width, 0);
         }
 
-        to = this.circle(to);
+        to = this.getIndex(to);
         this.move(to, 0);
 
         if (this.props.continuous) {
-            current = this.circle(to - direction);
-            this.move(current, -(this.state.slideStyle[current].width.slice(0, -2) * direction), 0); // We need to get the next in place
+            current = this.getIndex(to - direction);
+            this.move(current, -(this.state.slideStyle[current].width * direction), 0); // We need to get the next in place
         }
 
         this.setState({index: to});
@@ -119,8 +125,8 @@ module.exports = React.createClass({
     move: function(slide, position, speed) {
         this.translate(slide, position, speed == undefined ? this.props.speed : speed);
 
-        var slidePos = this.state.slidePos;
-        slidePos[_.findIndex(this.props.children, slide)] = position;
+        var slidePos = _.clone(this.state.slidePos);
+        slidePos[slide] = position;
         this.setState({slidePos: slidePos});
     },
 
@@ -139,97 +145,112 @@ module.exports = React.createClass({
 
     startX: 0,
     deltaX: 0,
+    activeSlides: [],
+    leftWidth: 0,
+    rightWidth: 0,
 
     onTouchDown: function (e) {
-        console.log('down');
+        this.activeSlides = [];
+        this.leftWidth = 0;
+        this.rightWidth = 0;
         this.startX = e.clientX;
         this.deltaX = 0;
+
+        var slideIndex = this.state.index;
+        var i;
+
+        do {
+            i = this.getIndex(slideIndex);
+            this.activeSlides.push(i);
+            this.rightWidth += this.state.slideStyle[i].width;
+            slideIndex++;
+        } while(this.rightWidth < this.state.width * 2 && (this.props.continuous ? true : (slideIndex < this.state.slidePos.length)));
+
+        slideIndex = this.state.index - 1;
+
+        while(this.leftWidth < this.state.width && (this.props.continuous ? true : (slideIndex > -1))) {
+            i = this.getIndex(slideIndex);
+            this.activeSlides.unshift(i);
+            this.leftWidth += this.state.slideStyle[i].width;
+            slideIndex--;
+        }
+
+        var base = this;
+        this.activeSlides.map(function(i) {
+            base.activeWidth += base.state.slideStyle[i].width;
+        });
 
         window.addEventListener('pointermove', this.onTouchMove);
         window.addEventListener('pointerup', this.onTouchUp);
     },
 
     onTouchMove: function(e) {
-        console.log('move');
         this.deltaX = e.clientX - this.startX;
 
-        var slides = this.props.children;
+        // If slide left from first slide or slide right from last slide
+        if (
+                this.deltaX < -(this.rightWidth - this.state.width)
+                || this.deltaX > this.leftWidth
+            )
+            this.deltaX = this.props.edgeFlick ?
+                (this.deltaX > 0 ? this.deltaX = this.leftWidth + Math.pow(this.deltaX - this.leftWidth, 0.7) :
+                    this.deltaX = -((this.rightWidth - this.state.width) + Math.pow(-this.deltaX - this.rightWidth + this.state.width, 0.7)))
+                : (this.deltaX > 0 ? this.leftWidth : -(this.rightWidth - this.state.width));
 
-        // increase resistance if first or last slide
-        if (this.props.continuous) { // we don't add resistance at the end
-            this.translate(this.circle(this.state.index - 1), this.deltaX + this.state.slidePos[this.circle(this.state.index - 1)], 0);
-            this.translate(this.state.index, this.deltaX + this.state.slidePos[this.state.index], 0);
-            this.translate(this.circle(this.state.index + 1), this.deltaX + this.state.slidePos[this.circle(this.state.index + 1)], 0);
+
+        var base = this;
+        var index = _.findIndex(this.activeSlides, function(i) { return i == base.state.index; });
+
+        var i;
+        var diff = 0;
+        var slide;
+
+        for (i = index; i < this.activeSlides.length; i++) {
+            slide = this.activeSlides[i];
+            this.translate(slide, this.deltaX + diff, 0);
+            diff += this.state.slideStyle[slide].width;
         }
-        else {
-            // If slide left from first slide or slide right from last slide
-            if (this.state.index != 0 && this.deltaX > 0 || this.state.index == slides.length - 1 && this.deltaX < 0)
-                this.deltaX = !this.props.edgeFlick ? 0 : this.deltaX / (Math.abs(this.deltaX) / this.getDOMNode().getBoundingClientRect().width + 1);
 
-            // translate 1:1
-            if(this.state.index > 0)
-                this.translate(this.state.index - 1, this.deltaX + this.state.slidePos[this.state.index - 1], 0);
-
-            this.translate(this.state.index, this.deltaX + this.state.slidePos[this.state.index], 0);
-
-            if(this.state.index < this.state.slidePos.length - 1)
-                this.translate(this.state.index + 1, this.deltaX + this.state.slidePos[this.state.index + 1], 0);
+        diff = 0;
+        for (i = index - 1; i >= 0; i--) {
+            slide = this.activeSlides[i];
+            diff += this.state.slideStyle[slide].width;
+            this.translate(slide, this.deltaX - diff, 0);
         }
     },
 
     onTouchUp: function() {
-        console.log('up');
-        var slides = this.props.children;
         var isValidSlide = Math.abs(this.deltaX) > 30;
         var isPastBounds =
-            this.state.index == 0 && this.deltaX > 0                        // if first slide and slide amt is greater than 0
-            || this.state.index == slides.length - 1 && this.deltaX < 0     // or if last slide and slide amt is less than 0
-            || !this.props.continuous;                                      // Can't be past bounds when continuous
+            (this.state.index == 0 && this.deltaX > 0                        // if first slide and slide amt is greater than 0
+            || this.state.index == this.props.children.length - 1 && this.deltaX < 0 )    // or if last slide and slide amt is less than 0
+            && !this.props.continuous;                                      // Can't be past bounds when continuous
 
-        var direction = this.deltaX < 0; // true: right, false: left
+        var direction = this.deltaX < 0 ? 1 : -1;
 
-        var next;
-        var prev;
-        var prevC;
+        var newIndex = isValidSlide && !isPastBounds ? this.getIndex(this.state.index + direction) : this.state.index;
 
-        if (isValidSlide && !isPastBounds) {
-            if (direction) {
-                next = this.circle(this.state.index + 1);
-                prev = this.circle(this.state.index - 1);
-                prevC = this.circle(this.state.index + 2);
-            } else {
-                next = this.circle(this.state.index - 1);
-                prev = this.circle(this.state.index + 1);
-                prevC = this.circle(this.state.index - 2);
+        this.setState({index: newIndex}, function() {
+            var base = this;
+            var index = _.findIndex(this.activeSlides, function(i) { return i == base.state.index; });
+
+            var i;
+            var diff = 0;
+            var slide;
+
+            for (i = index; i < this.activeSlides.length; i++) {
+                slide = this.activeSlides[i];
+                this.move(slide, diff);
+                diff += this.state.slideStyle[slide].width;
             }
 
-            this.move(prev, -this.state.slideStyle[prev].width.slice(0, -2), 0);
-            if (this.props.continuous)
-                this.move(prevC, this.state.slideStyle[prevC].width.slice(0, -2), 0);
-
-            this.move(this.state.index, this.state.slidePos[this.state.index] - this.state.slideStyle[this.state.index].width.slice(0, -2));
-
-            this.move(next, this.state.slidePos[next] - this.state.slideStyle[next].width.slice(0, -2));
-
-            this.setState({index: next});
-        }
-        else {
-            if (this.props.continuous) {
-                next = this.circle(this.state.index + 1);
-                prev = this.circle(this.state.index - 1);
-            } else {
-                next = this.state.index + 1;
-                prev = this.state.index - 1;
+            diff = 0;
+            for (i = index - 1; i >= 0; i--) {
+                slide = this.activeSlides[i];
+                diff += this.state.slideStyle[slide].width;
+                this.move(slide, -diff);
             }
-
-            if(prev >= 0)
-                this.move(prev, -this.state.slideStyle[prev].width.slice(0, -2));
-
-            this.move(this.state.index, 0);
-
-            if(next < this.state.slidePos.length)
-                this.move(next, this.state.slideStyle[next].width.slice(0, -2));
-        }
+        });
 
         this.startX = 0;
 
@@ -246,12 +267,13 @@ module.exports = React.createClass({
         var containerStyle = this.props.style ? _.clone(this.props.style) : {};
         containerStyle.overflow = "hidden";
         containerStyle.position = "relative";
+        containerStyle.touchAction = "none";
 
         var wrapperStyle = {
             overflow: "hidden",
             position: "relative",
             height: "100%",
-            width: this.state.totalWidth
+            width: this.state.totalWidth + 'px'
         };
 
         var base = this;
@@ -263,7 +285,11 @@ module.exports = React.createClass({
                     ref: "element"
                 },
                 React.Children.map(this.props.children, function(child, i) {
-                    return React.addons.cloneWithProps(child, {style: base.state.slideStyle[i]});
+                    var style = _.clone(base.state.slideStyle[i]);
+                    if(style)
+                        if(style.width)
+                            style.width += 'px';
+                    return React.addons.cloneWithProps(child, {style: style});
                 })
             )
         );
