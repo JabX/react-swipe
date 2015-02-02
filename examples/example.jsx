@@ -19,7 +19,7 @@ var Examples = React.createClass({
        var style01 = {background: "blue"};
        var style02 = {background: "red"};
        var style03 = {background: "green"};
-       var style11 = {background: "blue", width: "200px"};
+       var style11 = {background: "blue", width: "150px"};
        var style12 = {background: "green"};
 
         return (
@@ -41,7 +41,7 @@ var Examples = React.createClass({
                </Swipe>
 
                <h1>Uneven width Swipe</h1>
-               <Swipe style={height} startSlide={1} speed={100} edgeFlick={false} ref="swipe3">
+               <Swipe style={height} startSlide={1} edgeFlick={false} ref="swipe3">
                    <h1 style={style11}>FIRST</h1>
                    <h1 style={style12}>SECOND</h1>
                </Swipe>
