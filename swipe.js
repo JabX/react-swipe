@@ -102,7 +102,6 @@ module.exports = React.createClass({
 
         while(current <= to && direction == 1 || current >= to && direction == -1) {
             this.move(this.getIndex(current), totalWidth, 0);
-
             if (direction == 1) {
                 totalWidth += this.slides[this.getIndex(current)].width;
                 current++;
@@ -112,21 +111,24 @@ module.exports = React.createClass({
             }
         }
 
+        var base = this;
         this.updateSlides(function() {
-            // Move all slides
-            current = this.state.index;
-            while(current <= to && direction == 1 || current >= to && direction == -1) {
-                if(direction == 1) {
-                    this.move(this.getIndex(current), this.slides[this.getIndex(current)].transform - this.slides[this.getIndex(current - 1)].width);
-                    current++;
-                } else {
-                    this.move(this.getIndex(current), this.slides[this.getIndex(current)].transform + this.slides[this.getIndex(current - 1)].width);
-                    current--;
+            setTimeout(function () {
+                // Move all slides
+                current = base.state.index;
+                while (current <= to && direction == 1 || current >= to && direction == -1) {
+                    if (direction == 1) {
+                        base.move(base.getIndex(current), base.slides[base.getIndex(current)].transform - totalWidth + base.slides[base.getIndex(to)].width);
+                        current++;
+                    } else {
+                        base.move(base.getIndex(current), base.slides[base.getIndex(current)].transform - totalWidth - base.slides[base.getIndex(to)].width);
+                        current--;
+                    }
                 }
-            }
 
-            this.setState({index: this.getIndex(to)});
-            this.updateSlides();
+                base.setState({index: base.getIndex(to)});
+                base.updateSlides();
+            }, 10);
         });
     },
 
