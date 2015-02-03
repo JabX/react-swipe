@@ -16,7 +16,7 @@ module.exports = React.createClass({
     getInitialState: function() {
         return {
             index: this.props.startSlide,
-            slides: new Array(this.props.children.length),
+            slides: new Array(this.props.children.length), // Actual style of slides
             width: 0,
             totalWidth: 0
         };
@@ -31,8 +31,9 @@ module.exports = React.createClass({
         var defaultWidth = this.getDOMNode().getBoundingClientRect().width;
         var totalWidth = 0;
 
-        // Styling slides
-        var slides = this.state.slides;
+        this.slides = [];
+
+        var base = this;
         this.props.children.map(function(slide, i) {
             var width;
             if (!slide.props.style.width)
@@ -41,22 +42,24 @@ module.exports = React.createClass({
                 width = parseInt(slide.props.style.width);
             totalWidth += width;
 
-            slides[i] = {width: width, position: "absolute", height: "100%"};
+            base.slides.push({width: width});
         });
 
-        this.setState({slides: slides, width: defaultWidth, totalWidth: totalWidth}, function() {
-            // Positioning slides
-            for(var i = 0; i < slides.length; i++)
-                this.move(i, this.state.index > i ? -slides[i].width : (this.state.index < i ? slides[this.state.index].width : 0), 0);
+        this.setState({width: defaultWidth, totalWidth: totalWidth});
 
-            // Special positioning if continuous
-            if (this.props.continuous) {
-                this.move(this.getIndex(this.state.index - 1), -slides[this.getIndex(this.state.index - 1)].width, 0);
-                this.move(this.getIndex(this.state.index + 1), slides[this.state.index].width, 0);
-            }
+        // Positioning slides
+        for(var i = 0; i < this.slides.length; i++)
+            this.move(i, this.state.index > i ? -this.slides[i].width : (this.state.index < i ? this.slides[this.state.index].width : 0), 0);
 
-            this.getDOMNode().addEventListener('pointerdown', this.onTouchDown);
-        });
+        // Special positioning if continuous
+        if (this.props.continuous) {
+            this.move(this.getIndex(this.state.index - 1), -this.slides[this.getIndex(this.state.index - 1)].width, 0);
+            this.move(this.getIndex(this.state.index + 1), this.slides[this.state.index].width, 0);
+        }
+
+        this.updateSlides();
+
+        this.getDOMNode().addEventListener('pointerdown', this.onTouchDown);
     },
 
     prev: function() {
@@ -68,7 +71,7 @@ module.exports = React.createClass({
     },
 
     getIndex: function(index) {
-        var slidesNumber = this.state.slides.length;
+        var slidesNumber = this.slides.length;
 
         if(this.props.continuous)
             return (slidesNumber + (index % slidesNumber)) % slidesNumber;
@@ -77,11 +80,6 @@ module.exports = React.createClass({
             else if (index >= slidesNumber - 1) return slidesNumber - 1;
             else return index;
         }
-    },
-
-    getPos: function(index) {
-        var value = this.state.slides[this.getIndex(index)].transform;
-        return parseInt(value.substring(11, value.length - 3));
     },
 
     slide: function(to) {
@@ -95,43 +93,55 @@ module.exports = React.createClass({
         var totalWidth = 0;
         var current = this.state.index;
 
-        var slidePos = {};
-
         while(current <= to && direction == 1 || current >= to && direction == -1) {
             this.move(this.getIndex(current), totalWidth, 0);
 
             if (direction == 1) {
-                totalWidth += this.state.slides[this.getIndex(current)].width;
+                totalWidth += this.slides[this.getIndex(current)].width;
                 current++;
             } else {
                 current--;
-                totalWidth -= this.state.slides[this.getIndex(current)].width;
+                totalWidth -= this.slides[this.getIndex(current)].width;
             }
         }
 
-        // Move all slides
-        current = this.state.index;
-        while(current <= to && direction == 1 || current >= to && direction == -1) {
-            if(direction == 1) {
-                this.move(this.getIndex(current), this.getPos(current) - this.state.slides[this.getIndex(current - 1)].width);
-                current++;
-            } else {
-                this.move(this.getIndex(current), this.getPos(current) + this.state.slides[this.getIndex(current - 1)].width);
-                current--;
+        this.updateSlides(function() {
+            // Move all slides
+            current = this.state.index;
+            while(current <= to && direction == 1 || current >= to && direction == -1) {
+                if(direction == 1) {
+                    this.move(this.getIndex(current), this.slides[this.getIndex(current)].transform - this.slides[this.getIndex(current - 1)].width);
+                    current++;
+                } else {
+                    this.move(this.getIndex(current), this.slides[this.getIndex(current)].transform + this.slides[this.getIndex(current - 1)].width);
+                    current--;
+                }
             }
-        }
 
-        this.setState({index: this.getIndex(to)});
+            this.setState({index: this.getIndex(to)});
+            this.updateSlides();
+        });
     },
 
     move: function(slide, position, speed) {
-        var slides = _.clone(this.state.slides);
+        this.slides[slide].transitionDuration = (speed == undefined ? this.props.speed : speed);
+        this.slides[slide].transform = position;
+    },
 
-        slides[slide].transitionDuration = (speed == undefined ? this.props.speed : speed).toString() + 'ms';
-        slides[slide].transform = 'translateX(' + position.toString() + 'px)';
-        slides[slide].webkitTransform = 'translateX(' + position.toString() + 'px)';
+    updateSlides: function(callback) {
+        var newSlides = [];
+        for(var i = 0; i < this.slides.length; i++) {
+            var newSlide = {};
+            newSlide.position = "absolute";
+            newSlide.height = "100%";
+            newSlide.width = this.slides[i].width + "px";
+            newSlide.transitionDuration = this.slides[i].transitionDuration + 'ms';
+            newSlide.transform = 'translateX(' + this.slides[i].transform + 'px)';
+            newSlide.webkitTransform = 'translateX(' + this.slides[i].transform + 'px)';
+            newSlides.push(newSlide);
+        }
 
-        this.setState({slides: slides});
+        this.setState({slides: newSlides}, callback);
     },
 
     // Event Handling //
@@ -155,7 +165,7 @@ module.exports = React.createClass({
         do {
             i = this.getIndex(slideIndex);
             this.activeSlides.push(i);
-            this.rightWidth += this.state.slides[i].width;
+            this.rightWidth += this.slides[i].width;
             slideIndex++;
         } while(this.rightWidth < this.state.width * 2 && (this.props.continuous ? true : (slideIndex < this.state.slides.length)));
 
@@ -164,13 +174,13 @@ module.exports = React.createClass({
         while(this.leftWidth < this.state.width && (this.props.continuous ? true : (slideIndex > -1))) {
             i = this.getIndex(slideIndex);
             this.activeSlides.unshift(i);
-            this.leftWidth += this.state.slides[i].width;
+            this.leftWidth += this.slides[i].width;
             slideIndex--;
         }
 
         var base = this;
         this.activeSlides.map(function(i) {
-            base.activeWidth += base.state.slides[i].width;
+            base.activeWidth += base.slides[i].width;
         });
 
         window.addEventListener('pointermove', this.onTouchMove);
@@ -201,15 +211,17 @@ module.exports = React.createClass({
         for (i = index; i < this.activeSlides.length; i++) {
             slide = this.activeSlides[i];
             this.move(slide, this.deltaX + diff, 0);
-            diff += this.state.slides[slide].width;
+            diff += this.slides[slide].width;
         }
 
         diff = 0;
         for (i = index - 1; i >= 0; i--) {
             slide = this.activeSlides[i];
-            diff += this.state.slides[slide].width;
+            diff += this.slides[slide].width;
             this.move(slide, this.deltaX - diff, 0);
         }
+
+        this.updateSlides();
     },
 
     onTouchUp: function() {
@@ -234,15 +246,17 @@ module.exports = React.createClass({
             for (i = index; i < this.activeSlides.length; i++) {
                 slide = this.activeSlides[i];
                 this.move(slide, diff);
-                diff += this.state.slides[slide].width;
+                diff += this.slides[slide].width;
             }
 
             diff = 0;
             for (i = index - 1; i >= 0; i--) {
                 slide = this.activeSlides[i];
-                diff += this.state.slides[slide].width;
+                diff += this.slides[slide].width;
                 this.move(slide, -diff);
             }
+
+            this.updateSlides();
         });
 
         this.startX = 0;
@@ -278,11 +292,7 @@ module.exports = React.createClass({
                     ref: "element"
                 },
                 React.Children.map(this.props.children, function(child, i) {
-                    var style = _.clone(base.state.slides[i]);
-                    if(style)
-                        if(style.width)
-                            style.width += 'px';
-                    return React.addons.cloneWithProps(child, {style: style});
+                    return React.addons.cloneWithProps(child, {style: base.state.slides[i]});
                 })
             )
         );
