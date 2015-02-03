@@ -1,6 +1,8 @@
 var _ = require('lodash');
 var React = require("react/addons");
 
+require('./hand')();
+
 module.exports = React.createClass({
     displayName: "Swipe",
 
@@ -60,6 +62,11 @@ module.exports = React.createClass({
         this.updateSlides();
 
         this.getDOMNode().addEventListener('pointerdown', this.onTouchDown);
+        this.getDOMNode().addEventListener('pointercancel', this.disable, false);
+    },
+
+    disable: function() {
+        this.isScrolling = true;
     },
 
     prev: function() {
@@ -132,6 +139,8 @@ module.exports = React.createClass({
         var newSlides = [];
         for(var i = 0; i < this.slides.length; i++) {
             var newSlide = {};
+            newSlide.msUserSelect = "none";
+            newSlide.WebkitUserSelect = "none";
             newSlide.position = "absolute";
             newSlide.height = "100%";
             newSlide.width = this.slides[i].width + "px";
@@ -146,18 +155,23 @@ module.exports = React.createClass({
 
     // Event Handling //
 
-    startX: 0,
-    deltaX: 0,
+    start: {x: 0},
+    delta: {x: 0},
     activeSlides: [],
     leftWidth: 0,
     rightWidth: 0,
+    isScrolling: false,
 
     onTouchDown: function (e) {
+        if (e.isPrimary == false)
+            return;
+
         this.activeSlides = [];
         this.leftWidth = 0;
         this.rightWidth = 0;
-        this.startX = e.clientX;
-        this.deltaX = 0;
+        this.start.x = e.clientX;
+        this.delta.x = 0;
+        this.isScrolling = false;
 
         var slideIndex = this.state.index;
         var i;
@@ -183,26 +197,30 @@ module.exports = React.createClass({
             base.activeWidth += base.slides[i].width;
         });
 
-        window.addEventListener('pointermove', this.onTouchMove);
-        window.addEventListener('pointerup', this.onTouchUp);
+        window.addEventListener('pointermove', this.onTouchMove, false);
+        window.addEventListener('pointerup', this.onTouchUp, false);
     },
 
     onTouchMove: function(e) {
-        this.deltaX = e.clientX - this.startX;
+        if (this.isScrolling || e.isPrimary == false)
+            return;
 
-        // If slide left from first slide or slide right from last slide
+        this.delta.x = e.clientX - this.start.x;
+
         if (
-                this.deltaX < -(this.rightWidth - this.state.width)
-                || this.deltaX > this.leftWidth
-            )
-            this.deltaX = this.props.edgeFlick ?
-                (this.deltaX > 0 ? this.deltaX = this.leftWidth + Math.pow(this.deltaX - this.leftWidth, 0.7) :
-                    this.deltaX = -((this.rightWidth - this.state.width) + Math.pow(-this.deltaX - this.rightWidth + this.state.width, 0.7)))
-                : (this.deltaX > 0 ? this.leftWidth : -(this.rightWidth - this.state.width));
+            this.delta.x < -(this.rightWidth - this.state.width)
+            || this.delta.x > this.leftWidth
+        )
+            this.delta.x = this.props.edgeFlick ?
+                (this.delta.x > 0 ? this.delta.x = this.leftWidth + Math.pow(this.delta.x - this.leftWidth, 0.7) :
+                    this.delta.x = -((this.rightWidth - this.state.width) + Math.pow(-this.delta.x - this.rightWidth + this.state.width, 0.7)))
+                : (this.delta.x > 0 ? this.leftWidth : -(this.rightWidth - this.state.width));
 
 
         var base = this;
-        var index = _.findIndex(this.activeSlides, function(i) { return i == base.state.index; });
+        var index = _.findIndex(this.activeSlides, function (i) {
+            return i == base.state.index;
+        });
 
         var i;
         var diff = 0;
@@ -210,7 +228,7 @@ module.exports = React.createClass({
 
         for (i = index; i < this.activeSlides.length; i++) {
             slide = this.activeSlides[i];
-            this.move(slide, this.deltaX + diff, 0);
+            this.move(slide, this.delta.x + diff, 0);
             diff += this.slides[slide].width;
         }
 
@@ -218,22 +236,25 @@ module.exports = React.createClass({
         for (i = index - 1; i >= 0; i--) {
             slide = this.activeSlides[i];
             diff += this.slides[slide].width;
-            this.move(slide, this.deltaX - diff, 0);
+            this.move(slide, this.delta.x - diff, 0);
         }
 
         this.updateSlides();
     },
 
-    onTouchUp: function() {
-        var isValidSlide = Math.abs(this.deltaX) > 30;
+    onTouchUp: function(e, cancel) {
+        if (this.isScrolling || e.isPrimary == false)
+            return;
+
+        var isValidSlide = Math.abs(this.delta.x) > 30;
         var isPastBounds =
-            (this.state.index == 0 && this.deltaX > 0                        // if first slide and slide amt is greater than 0
-            || this.state.index == this.props.children.length - 1 && this.deltaX < 0 )    // or if last slide and slide amt is less than 0
+            (this.state.index == 0 && this.delta.x > 0                        // if first slide and slide amt is greater than 0
+            || this.state.index == this.props.children.length - 1 && this.delta.x < 0 )    // or if last slide and slide amt is less than 0
             && !this.props.continuous;                                      // Can't be past bounds when continuous
 
-        var direction = this.deltaX < 0 ? 1 : -1;
+        var direction = this.delta.x < 0 ? 1 : -1;
 
-        var newIndex = isValidSlide && !isPastBounds ? this.getIndex(this.state.index + direction) : this.state.index;
+        var newIndex = isValidSlide && !isPastBounds && !cancel ? this.getIndex(this.state.index + direction) : this.state.index;
 
         this.setState({index: newIndex}, function() {
             var base = this;
@@ -259,7 +280,7 @@ module.exports = React.createClass({
             this.updateSlides();
         });
 
-        this.startX = 0;
+        this.start.x = 0;
 
         window.removeEventListener('pointermove', this.onTouchMove);
         window.removeEventListener('pointerup', this.onTouchUp);
@@ -268,13 +289,14 @@ module.exports = React.createClass({
     componentWillUnmount: function() {
         window.removeEventListener('resize', this.resize, false);
         this.getDOMNode().removeEventListener('pointerdown', this.onTouchDown);
+        this.getDOMNode().removeEventListener('pointercancel', this.disable, false);
     },
 
     render: function() {
         var containerStyle = this.props.style ? _.clone(this.props.style) : {};
         containerStyle.overflow = "hidden";
         containerStyle.position = "relative";
-        containerStyle.touchAction = "none";
+        containerStyle.touchAction = "pan-y";
 
         var wrapperStyle = {
             overflow: "hidden",

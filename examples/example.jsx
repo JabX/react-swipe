@@ -14,6 +14,16 @@ var Examples = React.createClass({
         this.refs.swipe3.next();
     },
 
+    goto1: function() {
+        this.refs.swipe1.slide(0);
+        this.refs.swipe2.slide(0);
+    },
+
+    goto3: function() {
+        this.refs.swipe1.slide(2);
+        this.refs.swipe2.slide(2);
+    },
+
     render: function() {
        var height = {height: "200px"};
        var style01 = {background: "blue"};
@@ -26,6 +36,8 @@ var Examples = React.createClass({
            <div>
                <button onClick={this.next}>NEXT</button>
                <button onClick={this.prev}>PREV</button>
+               <button onClick={this.goto3}>GO TO 3</button>
+               <button onClick={this.goto1}>GO TO 1</button>
                <h1>Regular Swipe</h1>
                <Swipe style={height} ref="swipe1">
                    <h1 style={style01}>FIRST</h1>
