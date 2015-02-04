@@ -38,7 +38,7 @@ module.exports = React.createClass({
         var base = this;
         this.props.children.map(function(slide, i) {
             var width;
-            if (slide.props.style.width)
+            if (slide.props.style && slide.props.style.width)
                 width = parseInt(slide.props.style.width);
             else
                 width = defaultWidth;
