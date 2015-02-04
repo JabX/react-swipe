@@ -28,7 +28,12 @@ module.exports = React.createClass({
         this.setup();
         window.addEventListener('resize', this.setup, false);
     },
-
+    
+    componentDidUpdate: function() {
+        if(this.props.children.length != this.slides.length)
+            this.setup();
+    },
+    
     setup: function() {
         var defaultWidth = this.getDOMNode().getBoundingClientRect().width;
         var totalWidth = 0;
