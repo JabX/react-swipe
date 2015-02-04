@@ -672,7 +672,7 @@
     // Handling touch-action css rule
     if (document.styleSheets && document.addEventListener) {
         document.addEventListener("DOMContentLoaded", function () {
-            if (HANDJS.doNotProcessCSS || document.body.style.touchAction !== undefined) {//Chrome is trying to implement touch-action before Pointer Events listeners
+            if (document.body.style.touchAction !== undefined) {//Chrome is trying to implement touch-action before Pointer Events listeners
                 return;
             }
 
