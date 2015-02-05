@@ -25,20 +25,18 @@ module.exports = React.createClass({
     },
 
     componentDidMount: function() {
-        console.log(this.setup(), "init");
+        this.setup();
         window.addEventListener('resize', this.setup, false);
     },
     
     componentDidUpdate: function() {
         if(this.props.children.length != this.slides.length)
-            console.log(this.setup(), 'update');
+            this.setup();
     },
     
     setup: function() {
-        if (!this.getDOMNode()) {
-            console.log("fail");
-            return false;
-        }
+        if (!this.isMounted())
+            return;
 
         var defaultWidth = this.getDOMNode().getBoundingClientRect().width;
 
@@ -74,8 +72,6 @@ module.exports = React.createClass({
 
         this.getDOMNode().addEventListener('pointerdown', this.onTouchDown);
         this.getDOMNode().addEventListener('pointercancel', this.disable, false);
-
-        return true;
     },
 
     disable: function() {
