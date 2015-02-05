@@ -25,52 +25,57 @@ module.exports = React.createClass({
     },
 
     componentDidMount: function() {
-        this.setup();
+        console.log(this.setup(), "init");
         window.addEventListener('resize', this.setup, false);
     },
     
     componentDidUpdate: function() {
         if(this.props.children.length != this.slides.length)
-            this.setup();
+            console.log(this.setup(), 'update');
     },
     
-     setup: function() {
+    setup: function() {
+        if (!this.getDOMNode()) {
+            console.log("fail");
+            return false;
+        }
+
+        var defaultWidth = this.getDOMNode().getBoundingClientRect().width;
+
+        var totalWidth = 0;
+
+        this.slides = [];
+
         var that = this;
-        setTimeout(function() {
-            var defaultWidth = that.getDOMNode().getBoundingClientRect().width;
+        this.props.children.map(function (slide, i) {
+            var width;
+            if (slide.props.style && slide.props.style.width)
+                width = parseInt(slide.props.style.width);
+            else
+                width = defaultWidth;
+            totalWidth += width;
 
-            var totalWidth = 0;
+            that.slides.push({width: width});
+        });
 
-            that.slides = [];
+        this.setState({width: defaultWidth, totalWidth: totalWidth});
 
-            that.props.children.map(function (slide, i) {
-                var width;
-                if (slide.props.style && slide.props.style.width)
-                    width = parseInt(slide.props.style.width);
-                else
-                    width = defaultWidth;
-                totalWidth += width;
+        // Positioning slides
+        for (var i = 0; i < this.slides.length; i++)
+            this.move(i, this.state.index > i ?  this.slides[i].width : (this.state.index < i ? this.slides[this.state.index].width : 0), 0);
 
-                that.slides.push({width: width});
-            });
+        // Special positioning if continuous
+        if(this.props.continuous) {
+            this.move(this.getIndex(this.state.index - 1),  this.slides[this.getIndex(this.state.index - 1)].width, 0);
+            this.move(this.getIndex(this.state.index + 1), this.slides[this.state.index].width, 0);
+        }
 
-            that.setState({width: defaultWidth, totalWidth: totalWidth});
+        this.updateSlides();
 
-            // Positioning slides
-            for (var i = 0; i < that.slides.length; i++)
-                that.move(i, that.state.index > i ? -that.slides[i].width : (that.state.index < i ? that.slides[that.state.index].width : 0), 0);
+        this.getDOMNode().addEventListener('pointerdown', this.onTouchDown);
+        this.getDOMNode().addEventListener('pointercancel', this.disable, false);
 
-            // Special positioning if continuous
-            if (that.props.continuous) {
-                that.move(that.getIndex(that.state.index - 1), -that.slides[that.getIndex(that.state.index - 1)].width, 0);
-                that.move(that.getIndex(that.state.index + 1), that.slides[that.state.index].width, 0);
-            }
-
-            that.updateSlides();
-
-            that.getDOMNode().addEventListener('pointerdown', that.onTouchDown);
-            that.getDOMNode().addEventListener('pointercancel', that.disable, false);
-        }, 20);
+        return true;
     },
 
     disable: function() {
@@ -136,7 +141,7 @@ module.exports = React.createClass({
 
                 base.setState({index: base.getIndex(to)});
                 base.updateSlides();
-            }, 10);
+            }, 20);
         });
     },
 
