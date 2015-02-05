@@ -151,6 +151,7 @@ module.exports = React.createClass({
             var newSlide = {};
             newSlide.msUserSelect = "none";
             newSlide.WebkitUserSelect = "none";
+            newSlide.MozUserSelect = "none";
             newSlide.position = "absolute";
             newSlide.height = "100%";
             newSlide.width = this.slides[i].width + "px";
