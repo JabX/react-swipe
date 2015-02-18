@@ -17,7 +17,6 @@ module.exports = React.createClass({
 
     getInitialState: function() {
         return {
-            index: this.props.startSlide,
             slides: new Array(this.props.children.length), // Actual style of slides
             width: 0,
             totalWidth: 0
@@ -38,8 +37,8 @@ module.exports = React.createClass({
         if (!this.isMounted())
             return;
 
+        var index = Math.min(this.props.children.length - 1, this.props.startSlide);
         var defaultWidth = this.getDOMNode().getBoundingClientRect().width;
-
         var totalWidth = 0;
 
         this.slides = [];
@@ -56,16 +55,16 @@ module.exports = React.createClass({
             that.slides.push({width: width});
         });
 
-        this.setState({width: defaultWidth, totalWidth: totalWidth});
+        this.setState({index: index, width: defaultWidth, totalWidth: totalWidth});
 
         // Positioning slides
         for (var i = 0; i < this.slides.length; i++)
-            this.move(i, this.state.index > i ?  this.slides[i].width : (this.state.index < i ? this.slides[this.state.index].width : 0), 0);
+            this.move(i, this.props.startSlide > i ?  this.slides[i].width : (index < i ? this.slides[index].width : 0), 0);
 
         // Special positioning if continuous
         if(this.props.continuous) {
-            this.move(this.getIndex(this.state.index - 1),  this.slides[this.getIndex(this.state.index - 1)].width, 0);
-            this.move(this.getIndex(this.state.index + 1), this.slides[this.state.index].width, 0);
+            this.move(this.getIndex(index - 1),  this.slides[this.getIndex(index - 1)].width, 0);
+            this.move(this.getIndex(index + 1), this.slides[index].width, 0);
         }
 
         this.updateSlides();
@@ -88,7 +87,6 @@ module.exports = React.createClass({
 
     getIndex: function(index) {
         var slidesNumber = this.slides.length;
-
         if(this.props.continuous)
             return (slidesNumber + (index % slidesNumber)) % slidesNumber;
         else {
@@ -100,6 +98,7 @@ module.exports = React.createClass({
 
     slide: function(to) {
         // Do nothing if already on requested slide
+
         if (this.state.index == this.getIndex(to))
             return;
 
@@ -137,7 +136,7 @@ module.exports = React.createClass({
 
                 base.setState({index: base.getIndex(to)});
                 base.updateSlides();
-            }, 20);
+            }, 50);
         });
     },
 
@@ -216,7 +215,9 @@ module.exports = React.createClass({
     onTouchMove: function(e) {
         if (this.isScrolling || e.isPrimary == false)
             return;
-
+            
+        e.preventDefault(); // Android fix
+        
         this.delta.x = e.clientX - this.start.x;
 
         if (
