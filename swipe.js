@@ -11,7 +11,7 @@ module.exports = React.createClass({
             startSlide: 0,
             speed: 250,
             continuous: false,
-            edgeFlick: true
+            edgeFlick: true,
         };
     },
 
@@ -291,6 +291,7 @@ module.exports = React.createClass({
             }
 
             this.updateSlides();
+            this.props.callback && this.props.callback(this.state.index);
         });
 
         this.start.x = 0;
