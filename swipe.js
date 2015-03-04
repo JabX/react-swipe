@@ -208,6 +208,8 @@ module.exports = React.createClass({
             base.activeWidth += base.slides[i].width;
         });
 
+        this.onTouchMove(e); // Position all active slides in case we don't trigger onTouchMove the normal way
+
         window.addEventListener('pointermove', this.onTouchMove, false);
         window.addEventListener('pointerup', this.onTouchUp, false);
     },
