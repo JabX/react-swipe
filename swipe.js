@@ -59,13 +59,7 @@ module.exports = React.createClass({
 
         // Positioning slides
         for (var i = 0; i < this.slides.length; i++)
-            this.move(i, this.props.startSlide > i ?  this.slides[i].width : (index < i ? this.slides[index].width : 0), 0);
-
-        // Special positioning if continuous
-        if(this.props.continuous) {
-            this.move(this.getIndex(index - 1),  this.slides[this.getIndex(index - 1)].width, 0);
-            this.move(this.getIndex(index + 1), this.slides[index].width, 0);
-        }
+            this.move(i, i == index ? 0 : this.slides[index].width, 0);
 
         this.updateSlides();
 
