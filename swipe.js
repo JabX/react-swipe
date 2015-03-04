@@ -208,18 +208,20 @@ module.exports = React.createClass({
             base.activeWidth += base.slides[i].width;
         });
 
-        this.onTouchMove(e); // Position all active slides in case we don't trigger onTouchMove the normal way
+        this.onTouchMove(e, true); // Position all active slides in case we don't trigger onTouchMove the normal way
 
         window.addEventListener('pointermove', this.onTouchMove, false);
         window.addEventListener('pointerup', this.onTouchUp, false);
     },
 
-    onTouchMove: function(e) {
+    onTouchMove: function(e, prevent) {
         if (this.isScrolling || e.isPrimary == false)
             return;
-            
-        e.preventDefault(); // Android fix
-        
+
+        // Android fix
+        if(!prevent)
+            e.preventDefault();
+
         this.delta.x = e.clientX - this.start.x;
 
         if (
